@@ -126,6 +126,9 @@ export default function NavPage() {
             setEndLocation(displayName)
         }
 
+        if(startLocation && endLocation)
+            calculateRoute()
+
         setSearchResults([])
     }
 
@@ -310,7 +313,7 @@ export default function NavPage() {
                                 </div>
                             </div>
 
-                            <motion.button
+                            {/* <motion.button
                                 onClick={calculateRoute}
                                 className="w-full mb-4 py-3 bg-lime-300 text-black font-semibold rounded-lg hover:bg-lime-400 flex items-center justify-center"
                                 whileHover={{ scale: 1.02 }}
@@ -319,7 +322,7 @@ export default function NavPage() {
                             >
                                 <Navigation size={18} className="mr-2" />
                                 Calculează Ruta
-                            </motion.button>
+                            </motion.button> */}
 
                             <div className="h-[500px] rounded-lg overflow-hidden border border-gray-200">
                                 <Map
