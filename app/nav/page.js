@@ -313,17 +313,6 @@ export default function NavPage() {
                                 </div>
                             </div>
 
-                            {/* <motion.button
-                                onClick={calculateRoute}
-                                className="w-full mb-4 py-3 bg-lime-300 text-black font-semibold rounded-lg hover:bg-lime-400 flex items-center justify-center"
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                disabled={!startInput || !endInput}
-                            >
-                                <Navigation size={18} className="mr-2" />
-                                Calculează Ruta
-                            </motion.button> */}
-
                             <div className="h-[500px] rounded-lg overflow-hidden border border-gray-200">
                                 <Map
                                     key={mapKey}
