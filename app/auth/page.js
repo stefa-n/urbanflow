@@ -160,7 +160,7 @@ export default function Auth() {
                   id="confirmPassword"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="text-[#000] rounded-[0.33rem] w-full px-3 py-2 border border-[#eaeaea] focus:outline-none focus:ring-2 focus:ring-[#000] focus:border-transparent transition-all duration-200 ease-in-out"
+                  className="bg-white text-[#000] rounded-[0.33rem] w-full px-3 py-2 border border-[#eaeaea] focus:outline-none focus:ring-2 focus:ring-[#000] focus:border-transparent transition-all duration-200 ease-in-out"
                   placeholder="Confirmă parola"
                   required
                 />
