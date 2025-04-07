@@ -73,7 +73,7 @@ export default function Auth() {
     <div className={`bg-lime-200 min-h-screen flex items-center justify-center`}>
       <div className="w-full max-w-md p-8">
         <Image
-          src={require("../../public/logo/UrbanFlow4.png") || "/placeholder.svg"}
+          src={require("../../public/logo/UrbanFlow4.png")}
           alt="urbanflow logo"
           className="mb-4"
         />
