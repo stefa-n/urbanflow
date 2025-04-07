@@ -11,14 +11,14 @@ import md5 from "md5"
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 function ObjectLength(object) {
-  var length = 0;
+  var length = 0
   for (var key in object) {
     if (object.hasOwnProperty(key)) {
-      ++length;
+      ++length
     }
   }
-  return length;
-};
+  return length
+}
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null)
@@ -29,7 +29,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
-  const router = useRouter()
+  const [router, setRouter] = useState(useRouter())
+  const [XP, setXP] = useState(0)
 
   useEffect(() => {
     const getUser = async () => {
@@ -79,6 +80,7 @@ export default function ProfilePage() {
         setConfirmPassword("")
       }
     } catch (error) {
+      console.error("error:", error)
       setError(error.message)
     }
   }
@@ -100,7 +102,7 @@ export default function ProfilePage() {
   const gravatarUrl = `https://www.gravatar.com/avatar/${md5(email.toLowerCase().trim())}?d=identicon&s=200`
 
   return (
-    <div className="min-h-screen">
+    <div>
       <main className="container mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

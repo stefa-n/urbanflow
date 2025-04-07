@@ -6,13 +6,10 @@ import { motion, AnimatePresence } from "framer-motion"
 import { createClient } from "@supabase/supabase-js"
 import { useRouter } from "next/navigation"
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-)
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 export default function Auth() {
-  const router = useRouter();
+  const router = useRouter()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -22,7 +19,8 @@ export default function Auth() {
   const [message, setMessage] = useState("")
   const [isSignUp, setIsSignUp] = useState(false)
 
-  const validateEmail = (email) => { // regex pt email
+  const validateEmail = (email) => {
+    // regex pt email
     const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
     return re.test(email)
   }
@@ -50,7 +48,7 @@ export default function Auth() {
         if (error) throw error
         setMessage("Te-ai inregistrat cu succes!")
         setTimeout(() => {
-          setIsSignUp(false);
+          setIsSignUp(false)
         }, 500)
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -60,11 +58,11 @@ export default function Auth() {
         if (error) throw error
         setMessage("Te-ai logat cu succes!")
         setTimeout(() => {
-          router.push("/dashboard");
+          router.push("/dashboard")
         }, 1500)
       }
     } catch (error) {
-      console.error("Error:", error)
+      console.error("error:", error)
       setMessage(error.message || "Eroare! Te rog incearca din nou.")
     } finally {
       setIsLoading(false)
@@ -74,7 +72,11 @@ export default function Auth() {
   return (
     <div className={`bg-lime-200 min-h-screen flex items-center justify-center`}>
       <div className="w-full max-w-md p-8">
-        <Image src={require("../../public/logo/UrbanFlow4.png")} alt="urbanflow logo" className="mb-4"/>
+        <Image
+          src={require("../../public/logo/UrbanFlow4.png") || "/placeholder.svg"}
+          alt="urbanflow logo"
+          className="mb-4"
+        />
         <div className="mb-8 flex justify-center">
           <div className="relative inline-flex bg-gray-100 rounded-full p-1 border-black border-2">
             <motion.div
@@ -89,17 +91,15 @@ export default function Auth() {
             </motion.div>
             <button
               onClick={() => setIsSignUp(false)}
-              className={`relative z-10 px-6 py-2 text-sm font-medium transition-colors duration-200 ${
-                !isSignUp ? "text-white" : "text-black"
-              }`}
+              className={`relative z-10 px-6 py-2 text-sm font-medium transition-colors duration-200 ${!isSignUp ? "text-white" : "text-black"
+                }`}
             >
               Sign In
             </button>
             <button
               onClick={() => setIsSignUp(true)}
-              className={`relative z-10 px-6 py-2 text-sm font-medium transition-colors duration-200 ${
-                isSignUp ? "text-white" : "text-black"
-              }`}
+              className={`relative z-10 px-6 py-2 text-sm font-medium transition-colors duration-200 ${isSignUp ? "text-white" : "text-black"
+                }`}
             >
               Sign Up
             </button>

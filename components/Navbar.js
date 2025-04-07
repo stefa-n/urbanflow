@@ -13,22 +13,11 @@ export default function Navbar() {
   const [user, setUser] = useState(null)
   const pathname = usePathname()
   const router = useRouter()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [allCourses, setAllCourses] = useState([])
 
   useEffect(() => {
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
-    const fetchCourses = async () => {
-      const { data, error } = await supabase.from("courses").select("id, title").order("title", { ascending: true })
-
-      if (error) {
-        console.error("Error fetching courses:", error)
-      } else {
-        setAllCourses(data)
-      }
-    }
-
+    // auth handler
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN") {
         setUser(session.user)
@@ -57,7 +46,6 @@ export default function Navbar() {
     }
 
     checkSession()
-    fetchCourses()
 
     return () => {
       authListener.subscription.unsubscribe()
