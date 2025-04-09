@@ -126,8 +126,7 @@ export default function NavPage() {
             setEndLocation(displayName)
         }
 
-        if(startLocation && endLocation)
-            calculateRoute()
+        setShouldCalculateRoute(true)
 
         setSearchResults([])
     }
