@@ -19,19 +19,19 @@ const fixLeafletIcons = () => {
 
 const transportModeConfig = {
     car: {
-        profile: "mapbox/driving",
+        profile: "driving",
         lineColor: "#000000",
     },
     bus: {
-        profile: "mapbox/driving",
+        profile: "bus",
         lineColor: "#9333ea",
     },
     bike: {
-        profile: "mapbox/cycling",
+        profile: "cycling",
         lineColor: "#2196F3",
     },
     walking: {
-        profile: "mapbox/walking",
+        profile: "walking",
         lineColor: "#4CAF50",
     },
 }
@@ -190,7 +190,13 @@ export default function Map({
 
                 const modeConfig = transportModeConfig[transportMode] || transportModeConfig.car
 
+                const routingRouter = L.Routing.osrmv1({
+                    serviceUrl: "https://router.project-osrm.org/route/v1",
+                    profile: modeConfig.profile,
+                })
+
                 const routingControl = L.Routing.control({
+                    router: routingRouter,
                     waypoints: [L.latLng(startCoords[0], startCoords[1]), L.latLng(endCoords[0], endCoords[1])],
                     routeWhileDragging: false,
                     showAlternatives: true,

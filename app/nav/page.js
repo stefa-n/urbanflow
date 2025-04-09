@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Navigation, MapPin, LocateFixed, Car, Bus, Bike, FootprintsIcon as Walking, Leaf } from "lucide-react"
+import { MapPin, LocateFixed, Car, Bus, Bike, FootprintsIcon as Walking, Leaf } from "lucide-react"
 import { motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import TrafficIncident from "@/components/nav/TrafficIncident"
@@ -189,13 +189,13 @@ export default function NavPage() {
         }
     }
 
-    const calculateRoute = () => {
-        setError("")
-        setStartLocation(startInput)
-        setEndLocation(endInput)
-        setShouldCalculateRoute(true)
-        setMapKey((prev) => prev + 1)
-    }
+    // const calculateRoute = () => {
+    //     setError("")
+    //     setStartLocation(startInput)
+    //     setEndLocation(endInput)
+    //     setShouldCalculateRoute(true)
+    //     setMapKey((prev) => prev + 1)
+    // }
 
     const handleRouteFound = (routeData) => {
         if (routeData) {
@@ -232,7 +232,7 @@ export default function NavPage() {
                                             type="text"
                                             placeholder="Punct de plecare"
                                             value={startInput}
-                                            onChange={(e) => handleInputChange(e.target.value, 'start')}
+                                            onChange={(e) => handleInputChange(e.target.value, "start")}
                                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white"
                                         />
                                         {searchResults.length > 0 && searchType === "start" && (
@@ -243,7 +243,8 @@ export default function NavPage() {
                                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
                                                         onClick={() => selectLocation(feature)}
                                                     >
-                                                        {feature.properties.name || ''} {feature.properties.street || ''}, {feature.properties.city || ''}, {feature.properties.country || ''}
+                                                        {feature.properties.name || ""} {feature.properties.street || ""},{" "}
+                                                        {feature.properties.city || ""}, {feature.properties.country || ""}
                                                     </div>
                                                 ))}
                                             </div>
@@ -269,7 +270,7 @@ export default function NavPage() {
                                             type="text"
                                             placeholder="Destinație"
                                             value={endInput}
-                                            onChange={(e) => handleInputChange(e.target.value, 'end')}
+                                            onChange={(e) => handleInputChange(e.target.value, "end")}
                                             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent bg-white"
                                         />
                                         {searchResults.length > 0 && searchType === "end" && (
@@ -280,7 +281,8 @@ export default function NavPage() {
                                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b last:border-b-0"
                                                         onClick={() => selectLocation(feature)}
                                                     >
-                                                        {feature.properties.name || ''} {feature.properties.street || ''}, {feature.properties.city || ''}, {feature.properties.country || ''}
+                                                        {feature.properties.name || ""} {feature.properties.street || ""},{" "}
+                                                        {feature.properties.city || ""}, {feature.properties.country || ""}
                                                     </div>
                                                 ))}
                                             </div>
@@ -299,14 +301,20 @@ export default function NavPage() {
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                    {transportModes.map(mode => (
+                                    {transportModes.map((mode) => (
                                         <TransportOption
                                             key={mode.id}
                                             mode={mode.name}
                                             icon={mode.icon}
                                             time={routeInfo ? routeInfo.transportTimes[mode.id] : "--"}
                                             isSelected={selectedMode === mode.id}
-                                            onClick={() => setSelectedMode(mode.id)}
+                                            onClick={() => {
+                                                setSelectedMode(mode.id)
+                                                if (startLocation && endLocation) {
+                                                    setShouldCalculateRoute(true)
+                                                    setMapKey((prev) => prev + 1)
+                                                }
+                                            }}
                                         />
                                     ))}
                                 </div>
@@ -332,7 +340,7 @@ export default function NavPage() {
                         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
                             <h2 className="text-xl font-bold mb-4">Incidente Trafic</h2>
                             <div className="space-y-2">
-                                {incidents.map(incident => (
+                                {incidents.map((incident) => (
                                     <TrafficIncident key={incident.id} incident={incident} />
                                 ))}
                             </div>
@@ -343,4 +351,3 @@ export default function NavPage() {
         </div>
     )
 }
-
