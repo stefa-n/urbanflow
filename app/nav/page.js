@@ -1,11 +1,22 @@
 "use client"
 
-import { useState } from "react"
-import { MapPin, LocateFixed, Car, Bus, Bike, FootprintsIcon as Walking, Leaf } from "lucide-react"
+import { useState, useEffect } from "react"
+import {
+    Navigation,
+    MapPin,
+    LocateFixed,
+    Car,
+    Bus,
+    Bike,
+    FootprintsIcon as Walking,
+    Leaf,
+    BadgePlus,
+} from "lucide-react"
 import { motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import TrafficIncident from "@/components/nav/TrafficIncident"
 import TransportOption from "@/components/nav/TransportOption"
+import ReportTrafficIncident from "@/components/nav/ReportTrafficIncident"
 
 const coords = [46.9255, 26.37]
 
@@ -41,6 +52,8 @@ export default function NavPage() {
     const [endInput, setEndInput] = useState("")
     const [startLocation, setStartLocation] = useState("")
     const [endLocation, setEndLocation] = useState("")
+    const [startCoordinates, setStartCoordinates] = useState(null)
+    const [endCoordinates, setEndCoordinates] = useState(null)
     const [isSearching, setIsSearching] = useState(false)
     const [searchResults, setSearchResults] = useState([])
     const [searchType, setSearchType] = useState("start")
@@ -53,6 +66,8 @@ export default function NavPage() {
     const [incidents, setIncidents] = useState(placeholderIncidents)
     const [ecoPoints, setEcoPoints] = useState(120)
     const [searchTimeout, setSearchTimeout] = useState(null)
+    const [createIncident, setCreateIncident] = useState(false)
+    const [busStopsCount, setBusStopsCount] = useState(0)
 
     const searchLocation = async (query, type) => {
         if (!query.trim()) {
@@ -118,16 +133,20 @@ export default function NavPage() {
 
         const displayName = [name, street, city, state, country].filter(Boolean).join(", ")
 
+        // Extragem coordonatele din feature
+        const coordinates = feature.geometry.coordinates
+
         if (searchType === "start") {
             setStartInput(displayName)
             setStartLocation(displayName)
+            setStartCoordinates([coordinates[1], coordinates[0]]) // Inversăm ordinea pentru Leaflet (lat, lng)
         } else {
             setEndInput(displayName)
             setEndLocation(displayName)
+            setEndCoordinates([coordinates[1], coordinates[0]]) // Inversăm ordinea pentru Leaflet (lat, lng)
         }
 
         setShouldCalculateRoute(true)
-
         setSearchResults([])
     }
 
@@ -141,6 +160,7 @@ export default function NavPage() {
                     setCurrentLocation([latitude, longitude])
                     setStartInput("Locația mea curentă")
                     setStartLocation("Locația mea curentă")
+                    setStartCoordinates([latitude, longitude])
 
                     reverseGeocode(latitude, longitude)
                         .then((address) => {
@@ -189,13 +209,24 @@ export default function NavPage() {
         }
     }
 
-    // const calculateRoute = () => {
-    //     setError("")
-    //     setStartLocation(startInput)
-    //     setEndLocation(endInput)
-    //     setShouldCalculateRoute(true)
-    //     setMapKey((prev) => prev + 1)
-    // }
+    const calculateRoute = () => {
+        if (!startInput || !endInput) {
+            setError("Te rugăm să introduci atât locația de start cât și destinația")
+            return
+        }
+
+        setError("")
+        setStartLocation(startInput)
+        setEndLocation(endInput)
+
+        // Resetăm starea de calcul a rutei pentru a forța recalcularea
+        setShouldCalculateRoute(false)
+
+        // Folosim setTimeout pentru a ne asigura că starea a fost actualizată
+        setTimeout(() => {
+            setShouldCalculateRoute(true)
+        }, 100)
+    }
 
     const handleRouteFound = (routeData) => {
         if (routeData) {
@@ -212,8 +243,38 @@ export default function NavPage() {
                 duration: Math.round(baseDuration),
                 transportTimes,
             })
+
+            // Actualizăm numărul de stații de autobuz
+            if (routeData.busStops !== undefined) {
+                setBusStopsCount(routeData.busStops)
+            } else {
+                setBusStopsCount(0)
+            }
+        } else {
+            setBusStopsCount(0)
         }
         setShouldCalculateRoute(false)
+    }
+
+    // Resetăm numărul de stații de autobuz când se schimbă modul de transport
+    useEffect(() => {
+        if (selectedMode !== "bus") {
+            setBusStopsCount(0)
+        }
+    }, [selectedMode])
+
+    // Funcție pentru adăugarea unui nou incident
+    const handleAddIncident = (incidentData) => {
+        const newIncident = {
+            ...incidentData,
+            id: Date.now(), // Generăm un ID unic
+        }
+
+        setIncidents((prevIncidents) => [newIncident, ...prevIncidents])
+        setCreateIncident(false)
+
+        // Adăugăm puncte eco pentru raportare
+        setEcoPoints((prev) => prev + 50)
     }
 
     return (
@@ -289,6 +350,17 @@ export default function NavPage() {
                                         )}
                                     </div>
                                 </div>
+
+                                <motion.button
+                                    onClick={calculateRoute}
+                                    className="w-full py-3 bg-lime-300 text-black font-semibold rounded-lg hover:bg-lime-400 flex items-center justify-center"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    disabled={!startInput || !endInput}
+                                >
+                                    <Navigation size={18} className="mr-2" />
+                                    {routeInfo ? "Recalculează Ruta" : "Calculează Ruta"}
+                                </motion.button>
                             </div>
 
                             <div className="bg-gray-50 rounded-lg p-4 mb-4">
@@ -308,6 +380,7 @@ export default function NavPage() {
                                             icon={mode.icon}
                                             time={routeInfo ? routeInfo.transportTimes[mode.id] : "--"}
                                             isSelected={selectedMode === mode.id}
+                                            busStops={mode.id === "bus" ? busStopsCount : 0}
                                             onClick={() => {
                                                 setSelectedMode(mode.id)
                                                 if (startLocation && endLocation) {
@@ -320,12 +393,20 @@ export default function NavPage() {
                                 </div>
                             </div>
 
+                            {error && (
+                                <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded">
+                                    <p>{error}</p>
+                                </div>
+                            )}
+
                             <div className="h-[500px] rounded-lg overflow-hidden border border-gray-200">
                                 <Map
                                     key={mapKey}
                                     initialCenter={coords}
                                     startLocation={startLocation}
                                     endLocation={endLocation}
+                                    startCoordinates={startCoordinates}
+                                    endCoordinates={endCoordinates}
                                     currentLocation={currentLocation}
                                     onRouteFound={handleRouteFound}
                                     shouldCalculateRoute={shouldCalculateRoute}
@@ -338,12 +419,34 @@ export default function NavPage() {
 
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                            <h2 className="text-xl font-bold mb-4">Incidente Trafic</h2>
-                            <div className="space-y-2">
-                                {incidents.map((incident) => (
-                                    <TrafficIncident key={incident.id} incident={incident} />
-                                ))}
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold">Incidente Trafic</h2>
+                                <button
+                                    onClick={() => setCreateIncident(!createIncident)}
+                                    className="p-1.5 bg-lime-300 text-black rounded-full hover:bg-lime-400 flex items-center justify-center transition-colors"
+                                    title="Raportează un incident"
+                                >
+                                    <BadgePlus size={20} />
+                                </button>
                             </div>
+
+                            {createIncident && (
+                                <div className="mb-6 border-b pb-4">
+                                    <ReportTrafficIncident onClose={() => setCreateIncident(false)} onSubmit={handleAddIncident} />
+                                </div>
+                            )}
+
+                            {incidents.length > 0 ? (
+                                <div className="space-y-4">
+                                    {incidents.map((incident) => (
+                                        <TrafficIncident key={incident.id} incident={incident} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-6 text-gray-500">
+                                    <p>Nu există incidente raportate în zonă</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
