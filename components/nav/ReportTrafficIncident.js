@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react"
 import { AlertTriangle, MapPin, X, Check } from 'lucide-react'
 import { motion } from "framer-motion"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 const incidentTypes = [
   { id: "accident", label: "Accident" },
@@ -168,30 +171,55 @@ export default function ReportTrafficIncident({ onClose, onSubmit }) {
       return
     }
 
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+    if (!currentCoordinates) {
+      setError("Nu am putut determina coordonatele locației")
+      setIsSubmitting(false)
+      return
+    }
 
-      const incidentData = {
-        type: incidentTypes.find(t => t.id === incidentType)?.label || incidentType,
-        severity: severityLevels.find(s => s.id === severity)?.label || severity,
-        location,
-        description,
-        coordinates: currentCoordinates,
-        time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
-      }
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (onSubmit) {
-        onSubmit(incidentData)
+      if (userError) throw userError
+
+      if (!user) {
+        setError("Trebuie să fii autentificat pentru a raporta un incident")
+        return
       }
+
+      const { error: insertError } = await supabase
+        .from('reports')
+        .insert({
+          created_by: user.id,
+          type: incidentTypes.find(t => t.id === incidentType)?.label || incidentType,
+          severity: severityLevels.find(s => s.id === severity)?.label || severity,
+          locationx: currentCoordinates[0],
+          locationy: currentCoordinates[1],
+          description: description || location
+        })
+
+      if (insertError) throw insertError
 
       setSuccess(true)
+      
+      if (onSubmit) {
+        onSubmit({
+          type: incidentTypes.find(t => t.id === incidentType)?.label || incidentType,
+          severity: severityLevels.find(s => s.id === severity)?.label || severity,
+          location,
+          description,
+          coordinates: currentCoordinates,
+          time: new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
+        })
+      }
+
       setIncidentType("")
       setSeverity("")
       setLocation("")
       setDescription("")
       setCurrentCoordinates(null)
     } catch (error) {
-      console.error("error when reportign:", error)
+      console.error("error when reporting:", error)
       setError("A apărut o eroare la raportarea incidentului. Te rugăm să încerci din nou.")
     } finally {
       setIsSubmitting(false)

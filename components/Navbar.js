@@ -53,7 +53,7 @@ export default function Navbar() {
   }, [pathname, router])
 
   const navItems = [
-    { name: "Acasa", href: "/dashboard", icon: Home },
+    { name: "Acasa", href: "/", icon: Home },
     { name: "Navigare", href: "/nav", icon: Navigation },
     { name: "Recompense", href: "/reward", icon: Trophy },
   ]

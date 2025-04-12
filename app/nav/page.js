@@ -11,12 +11,17 @@ import {
     FootprintsIcon as Walking,
     Leaf,
     BadgePlus,
+    Taxi
 } from "lucide-react"
 import { motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import TrafficIncident from "@/components/nav/TrafficIncident"
 import TransportOption from "@/components/nav/TransportOption"
 import ReportTrafficIncident from "@/components/nav/ReportTrafficIncident"
+import RideServiceOption from "@/components/nav/RideServiceOption"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
 const coords = [46.9255, 26.37]
 
@@ -31,7 +36,6 @@ const Map = dynamic(() => import("../../components/Map"), {
 
 const transportModes = [
     { id: "car", name: "Mașină", icon: Car, speedFactor: 1 },
-    { id: "bus", name: "Autobuz", icon: Bus, speedFactor: 1.2 },
     { id: "bike", name: "Bicicletă", icon: Bike, speedFactor: 3 },
     { id: "walking", name: "Mers pe jos", icon: Walking, speedFactor: 5 },
 ]
@@ -63,11 +67,11 @@ export default function NavPage() {
     const [mapKey, setMapKey] = useState(1)
     const [shouldCalculateRoute, setShouldCalculateRoute] = useState(false)
     const [selectedMode, setSelectedMode] = useState("car")
-    const [incidents, setIncidents] = useState(placeholderIncidents)
-    const [ecoPoints, setEcoPoints] = useState(120)
+    const [incidents, setIncidents] = useState([])
+    const [ecoPoints, setEcoPoints] = useState(0)
     const [searchTimeout, setSearchTimeout] = useState(null)
     const [createIncident, setCreateIncident] = useState(false)
-    const [busStopsCount, setBusStopsCount] = useState(0)
+    const [user, setUser] = useState(null)
 
     const searchLocation = async (query, type) => {
         if (!query.trim()) {
@@ -133,17 +137,16 @@ export default function NavPage() {
 
         const displayName = [name, street, city, state, country].filter(Boolean).join(", ")
 
-        // Extragem coordonatele din feature
         const coordinates = feature.geometry.coordinates
 
         if (searchType === "start") {
             setStartInput(displayName)
             setStartLocation(displayName)
-            setStartCoordinates([coordinates[1], coordinates[0]]) // Inversăm ordinea pentru Leaflet (lat, lng)
+            setStartCoordinates([coordinates[1], coordinates[0]])
         } else {
             setEndInput(displayName)
             setEndLocation(displayName)
-            setEndCoordinates([coordinates[1], coordinates[0]]) // Inversăm ordinea pentru Leaflet (lat, lng)
+            setEndCoordinates([coordinates[1], coordinates[0]])
         }
 
         setShouldCalculateRoute(true)
@@ -219,10 +222,8 @@ export default function NavPage() {
         setStartLocation(startInput)
         setEndLocation(endInput)
 
-        // Resetăm starea de calcul a rutei pentru a forța recalcularea
         setShouldCalculateRoute(false)
 
-        // Folosim setTimeout pentru a ne asigura că starea a fost actualizată
         setTimeout(() => {
             setShouldCalculateRoute(true)
         }, 100)
@@ -243,38 +244,141 @@ export default function NavPage() {
                 duration: Math.round(baseDuration),
                 transportTimes,
             })
-
-            // Actualizăm numărul de stații de autobuz
-            if (routeData.busStops !== undefined) {
-                setBusStopsCount(routeData.busStops)
-            } else {
-                setBusStopsCount(0)
-            }
-        } else {
-            setBusStopsCount(0)
         }
         setShouldCalculateRoute(false)
     }
 
-    // Resetăm numărul de stații de autobuz când se schimbă modul de transport
     useEffect(() => {
-        if (selectedMode !== "bus") {
-            setBusStopsCount(0)
-        }
-    }, [selectedMode])
+        const fetchReports = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .eq('published', true)
+                    .order('created_at', { ascending: false })
 
-    // Funcție pentru adăugarea unui nou incident
-    const handleAddIncident = (incidentData) => {
+                if (error) {
+                    throw error
+                }
+
+                const formattedReports = data.map(report => ({
+                    id: report.id,
+                    location: report.description,
+                    type: report.type,
+                    severity: report.severity,
+                    time: new Date(report.created_at).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' }),
+                    coordinates: [report.locationx, report.locationy]
+                }))
+
+                setIncidents(formattedReports)
+            } catch (error) {
+                console.error("Error fetching reports:", error)
+            }
+        }
+
+        fetchReports()
+
+        const channel = supabase
+            .channel('reports')
+            .on('postgres_changes', 
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'reports'
+                },
+                async (payload) => {
+                    await fetchReports()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            channel.unsubscribe()
+        }
+    }, [])
+
+    useEffect(() => {
+        const fetchUserAndPoints = async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                setUser(user)
+                
+                try {
+                    const response = await fetch(`/api/eco-points?user_id=${user.id}`)
+                    const data = await response.json()
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error)
+                    }
+
+                    setEcoPoints(data.points)
+                } catch (error) {
+                    console.error("Error fetching eco points:", error)
+                }
+            }
+        }
+
+        fetchUserAndPoints()
+
+        const channel = supabase
+            .channel('eco_points_changes')
+            .on('postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'eco_points',
+                    filter: user ? `user_id=eq.${user?.id}` : undefined
+                },
+                async (payload) => {
+                    if (payload.new && payload.new.points !== undefined) {
+                        setEcoPoints(payload.new.points)
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            channel.unsubscribe()
+        }
+    }, [])
+
+    const updateEcoPoints = async (pointsToAdd) => {
+        if (!user) return
+
+        try {
+            const response = await fetch('/api/eco-points', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    user_id: user.id,
+                    points_to_add: pointsToAdd
+                })
+            })
+
+            const data = await response.json()
+            
+            if (!response.ok) {
+                throw new Error(data.error)
+            }
+
+            setEcoPoints(data.points)
+        } catch (error) {
+            console.error("Error updating eco points:", error)
+        }
+    }
+
+    const handleAddIncident = async (incidentData) => {
         const newIncident = {
             ...incidentData,
-            id: Date.now(), // Generăm un ID unic
+            id: Date.now(),
         }
 
         setIncidents((prevIncidents) => [newIncident, ...prevIncidents])
         setCreateIncident(false)
 
-        // Adăugăm puncte eco pentru raportare
-        setEcoPoints((prev) => prev + 50)
+        await updateEcoPoints(100)
     }
 
     return (
@@ -380,7 +484,6 @@ export default function NavPage() {
                                             icon={mode.icon}
                                             time={routeInfo ? routeInfo.transportTimes[mode.id] : "--"}
                                             isSelected={selectedMode === mode.id}
-                                            busStops={mode.id === "bus" ? busStopsCount : 0}
                                             onClick={() => {
                                                 setSelectedMode(mode.id)
                                                 if (startLocation && endLocation) {
@@ -390,6 +493,17 @@ export default function NavPage() {
                                             }}
                                         />
                                     ))}
+                                    <RideServiceOption
+                                        distance={routeInfo?.distance}
+                                        isSelected={selectedMode === "ride"}
+                                        onClick={() => {
+                                            setSelectedMode("ride")
+                                            if (startLocation && endLocation) {
+                                                setShouldCalculateRoute(true)
+                                                setMapKey((prev) => prev + 1)
+                                            }
+                                        }}
+                                    />
                                 </div>
                             </div>
 

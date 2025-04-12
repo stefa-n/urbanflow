@@ -22,10 +22,6 @@ const transportModeConfig = {
         profile: "driving",
         lineColor: "#000000",
     },
-    bus: {
-        profile: "bus",
-        lineColor: "#9333ea",
-    },
     bike: {
         profile: "cycling",
         lineColor: "#2196F3",
@@ -33,6 +29,10 @@ const transportModeConfig = {
     walking: {
         profile: "walking",
         lineColor: "#4CAF50",
+    },
+    ride: {
+        profile: "driving",
+        lineColor: "#F50057",
     },
 }
 
