@@ -58,7 +58,7 @@ export default function Auth() {
         if (error) throw error
         setMessage("Te-ai logat cu succes!")
         setTimeout(() => {
-          router.push("/dashboard")
+          router.push("/nav")
         }, 1500)
       }
     } catch (error) {

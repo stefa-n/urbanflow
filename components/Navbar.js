@@ -33,10 +33,10 @@ export default function Navbar() {
 
     const checkSession = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
-        setUser(session.user)
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
       } else {
         setUser(null)
         if (pathname !== "/auth" && pathname !== "/") {

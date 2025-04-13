@@ -89,6 +89,33 @@ export default function Map({
     }, [initialCenter])
 
     useEffect(() => {
+        if (mapInstanceRef.current && isTracking && currentLocation) {
+            const trackingIcon = L.divIcon({
+                html: `<div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg">
+                    <div class="w-4 h-4 bg-white rounded-full animate-ping"></div>
+                </div>`,
+                className: "tracking-marker",
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            })
+
+            if (trackingMarkerRef.current) {
+                trackingMarkerRef.current.setLatLng(currentLocation)
+            } else {
+                trackingMarkerRef.current = L.marker(currentLocation, { 
+                    icon: trackingIcon,
+                    zIndexOffset: 1000
+                }).addTo(mapInstanceRef.current)
+            }
+
+            mapInstanceRef.current.setView(currentLocation, mapInstanceRef.current.getZoom())
+        } else if (!isTracking && trackingMarkerRef.current) {
+            trackingMarkerRef.current.remove()
+            trackingMarkerRef.current = null
+        }
+    }, [isTracking, currentLocation])
+
+    useEffect(() => {
         if (mapInstanceRef.current && currentLocation) {
             const customIcon = L.divIcon({
                 html: `<div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500">
@@ -269,36 +296,6 @@ export default function Map({
         calculateRoute()
     }, [shouldCalculateRoute, startLocation, endLocation, currentLocation, onRouteFound, transportMode])
 
-    useEffect(() => {
-        if (mapInstanceRef.current && isTracking && currentLocation) {
-            // Create or update tracking marker
-            const trackingIcon = L.divIcon({
-                html: `<div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg">
-                    <div class="w-4 h-4 bg-white rounded-full animate-ping"></div>
-                </div>`,
-                className: "tracking-marker",
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-            })
-
-            if (trackingMarkerRef.current) {
-                trackingMarkerRef.current.setLatLng(currentLocation)
-            } else {
-                trackingMarkerRef.current = L.marker(currentLocation, { 
-                    icon: trackingIcon,
-                    zIndexOffset: 1000
-                }).addTo(mapInstanceRef.current)
-            }
-
-            // Center map on current location while tracking
-            mapInstanceRef.current.setView(currentLocation, mapInstanceRef.current.getZoom())
-        } else if (!isTracking && trackingMarkerRef.current) {
-            // Remove tracking marker when not tracking
-            trackingMarkerRef.current.remove()
-            trackingMarkerRef.current = null
-        }
-    }, [isTracking, currentLocation])
-
     const geocodeLocation = async (query) => {
         try {
             const response = await fetch(`/api/geocode/search?q=${encodeURIComponent(query)}&limit=1`)
@@ -343,4 +340,4 @@ export default function Map({
             <div ref={mapRef} className="w-full h-full z-10" />
         </div>
     )
-}
+} 

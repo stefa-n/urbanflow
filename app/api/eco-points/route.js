@@ -15,31 +15,17 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    let { data: points, error: getError } = await supabase
+    const { data, error } = await supabase
       .from('eco_points')
-      .select('*')
+      .select('points')
       .eq('user_id', userId)
       .single()
 
-    if (getError && getError.code !== 'PGRST116') {
-      throw getError
+    if (error && error.code !== 'PGRST116') {
+      throw error
     }
 
-    if (!points) {
-      const { data: newPoints, error: insertError } = await supabase
-        .from('eco_points')
-        .insert([{ user_id: userId, points: 0 }])
-        .select()
-        .single()
-
-      if (insertError) {
-        throw insertError
-      }
-
-      points = newPoints
-    }
-
-    return NextResponse.json(points)
+    return NextResponse.json({ points: data?.points || 0 })
   } catch (error) {
     console.error('Error in eco-points route:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -57,7 +43,8 @@ export async function PATCH(request) {
       )
     }
 
-    const { data: currentPoints, error: getError } = await supabase
+    // First, get current points or initialize with 0
+    const { data: currentData, error: getError } = await supabase
       .from('eco_points')
       .select('points')
       .eq('user_id', user_id)
@@ -67,23 +54,29 @@ export async function PATCH(request) {
       throw getError
     }
 
-    const newPoints = (currentPoints?.points || 0) + points_to_add
+    const currentPoints = currentData?.points || 0
+    const newPoints = currentPoints + points_to_add
 
-    const { data: updatedPoints, error: updateError } = await supabase
+    // Use upsert to either update existing record or create new one
+    const { data: updatedData, error: updateError } = await supabase
       .from('eco_points')
-      .upsert({
-        user_id,
-        points: newPoints,
-        updated_at: new Date().toISOString()
-      })
+      .upsert(
+        {
+          user_id,
+          points: newPoints,
+          updated_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'user_id',
+          returning: true
+        }
+      )
       .select()
       .single()
 
-    if (updateError) {
-      throw updateError
-    }
+    if (updateError) throw updateError
 
-    return NextResponse.json(updatedPoints)
+    return NextResponse.json(updatedData)
   } catch (error) {
     console.error('Error in eco-points route:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

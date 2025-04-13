@@ -3,21 +3,14 @@
 import { motion } from "framer-motion"
 import {
   Navigation,
-  Car,
   Leaf,
   MapPin,
   AlertTriangle,
-  BarChart3,
   Gift,
   Users,
   Clock,
   Route,
-  Building2,
-  TreePine,
   ArrowDown,
-  Zap,
-  Shield,
-  Award,
   Map,
 } from "lucide-react"
 import Link from "next/link"

@@ -20,6 +20,7 @@ import TransportOption from "@/components/nav/TransportOption"
 import ReportTrafficIncident from "@/components/nav/ReportTrafficIncident"
 import RideServiceOption from "@/components/nav/RideServiceOption"
 import { createClient } from "@supabase/supabase-js"
+import GpsTracker from "@/components/GpsTracker"
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
@@ -72,6 +73,8 @@ export default function NavPage() {
     const [searchTimeout, setSearchTimeout] = useState(null)
     const [createIncident, setCreateIncident] = useState(false)
     const [user, setUser] = useState(null)
+    const [isTracking, setIsTracking] = useState(false)
+    const [selectedRouteInfo, setSelectedRouteInfo] = useState(null)
 
     const searchLocation = async (query, type) => {
         if (!query.trim()) {
@@ -221,6 +224,11 @@ export default function NavPage() {
         setError("")
         setStartLocation(startInput)
         setEndLocation(endInput)
+        setSelectedRouteInfo({
+            startLocation: startInput,
+            endLocation: endInput
+        })
+        setIsTracking(true)
 
         setShouldCalculateRoute(false)
 
@@ -246,6 +254,15 @@ export default function NavPage() {
             })
         }
         setShouldCalculateRoute(false)
+    }
+
+    const handleDistanceUpdate = (distance) => {
+        if (routeInfo) {
+            setRouteInfo({
+                ...routeInfo,
+                currentDistance: distance
+            })
+        }
     }
 
     useEffect(() => {
@@ -463,7 +480,7 @@ export default function NavPage() {
                                     disabled={!startInput || !endInput}
                                 >
                                     <Navigation size={18} className="mr-2" />
-                                    {routeInfo ? "Recalculează Ruta" : "Calculează Ruta"}
+                                    Începe navigarea
                                 </motion.button>
                             </div>
 
@@ -507,6 +524,15 @@ export default function NavPage() {
                                 </div>
                             </div>
 
+                            {isTracking && (
+                                <GpsTracker
+                                    isTracking={isTracking}
+                                    selectedRoute={selectedRouteInfo}
+                                    onDistanceUpdate={handleDistanceUpdate}
+                                    transportMode={selectedMode}
+                                />
+                            )}
+
                             {error && (
                                 <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded">
                                     <p>{error}</p>
@@ -526,6 +552,7 @@ export default function NavPage() {
                                     shouldCalculateRoute={shouldCalculateRoute}
                                     transportMode={selectedMode}
                                     incidents={incidents}
+                                    isTracking={isTracking}
                                 />
                             </div>
                         </div>
