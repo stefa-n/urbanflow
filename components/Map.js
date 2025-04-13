@@ -45,7 +45,10 @@ export default function Map({
     shouldCalculateRoute,
     transportMode = "car",
     incidents = [],
-    isTracking
+    isTracking,
+    reports = [],
+    selectedReport,
+    onMarkerClick,
 }) {
     const mapRef = useRef(null)
     const mapInstanceRef = useRef(null)
@@ -54,6 +57,7 @@ export default function Map({
     const trackingMarkerRef = useRef(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
+    const markersRef = useRef([])
 
     useEffect(() => {
         fixLeafletIcons()
@@ -271,7 +275,6 @@ export default function Map({
 
     useEffect(() => {
         if (mapInstanceRef.current && isTracking && currentLocation) {
-            // Create or update tracking marker
             const trackingIcon = L.divIcon({
                 html: `<div class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg">
                     <div class="w-4 h-4 bg-white rounded-full animate-ping"></div>
@@ -290,14 +293,86 @@ export default function Map({
                 }).addTo(mapInstanceRef.current)
             }
 
-            // Center map on current location while tracking
             mapInstanceRef.current.setView(currentLocation, mapInstanceRef.current.getZoom())
         } else if (!isTracking && trackingMarkerRef.current) {
-            // Remove tracking marker when not tracking
             trackingMarkerRef.current.remove()
             trackingMarkerRef.current = null
         }
     }, [isTracking, currentLocation])
+
+    useEffect(() => {
+        if (!mapInstanceRef.current) return
+
+        markersRef.current.forEach((marker) => {
+            if (marker) marker.remove()
+        })
+        markersRef.current = []
+
+        reports.forEach((report) => {
+            if (!report.coordinates) return
+
+            const getSeverityColor = (severity) => {
+                switch (severity?.toLowerCase()) {
+                    case 'high':
+                        return 'bg-red-500'
+                    case 'medium':
+                        return 'bg-orange-500'
+                    case 'low':
+                        return 'bg-yellow-500'
+                    default:
+                        return 'bg-gray-500'
+                }
+            }
+
+            const reportIcon = L.divIcon({
+                html: `<div class="flex items-center justify-center w-8 h-8 rounded-full ${getSeverityColor(report.severity)}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                  <path d="M12 9v4"></path>
+                  <path d="M12 17h.01"></path>
+                </svg>
+              </div>`,
+                className: "custom-div-icon",
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+            })
+
+            const marker = L.marker(report.coordinates, {
+                icon: reportIcon,
+                draggable: false,
+            }).addTo(mapInstanceRef.current)
+
+            marker.on('click', () => {
+                onMarkerClick && onMarkerClick(report)
+            })
+
+            marker.bindPopup(`
+                <div class="p-2">
+                    <h3 class="font-bold">${report.location || 'Locație necunoscută'}</h3>
+                    <p>${report.type || 'Tip necunoscut'}</p>
+                    <p class="text-sm">Severitate: ${report.severity || 'Necunoscută'}</p>
+                    <p class="text-xs text-gray-500">${new Date(report.created_at).toLocaleString('ro-RO')}</p>
+                </div>
+            `)
+
+            markersRef.current.push(marker)
+        })
+    }, [reports, mapInstanceRef.current])
+
+    useEffect(() => {
+        if (mapInstanceRef.current && selectedReport?.coordinates) {
+            mapInstanceRef.current.setView(selectedReport.coordinates, 15)
+            
+            const marker = markersRef.current.find(m => 
+                m.getLatLng().lat === selectedReport.coordinates[0] && 
+                m.getLatLng().lng === selectedReport.coordinates[1]
+            )
+            
+            if (marker) {
+                marker.openPopup()
+            }
+        }
+    }, [selectedReport])
 
     const geocodeLocation = async (query) => {
         try {
@@ -323,6 +398,14 @@ export default function Map({
         }
     }
 
+    if (error) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-red-500">Eroare: {error}</div>
+            </div>
+        )
+    }
+
     return (
         <div className="relative w-full h-full rounded-lg overflow-hidden">
             {isLoading && (
@@ -331,12 +414,6 @@ export default function Map({
                         <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
                         <p className="mt-2 text-gray-700">Se calculează ruta...</p>
                     </div>
-                </div>
-            )}
-
-            {error && (
-                <div className="absolute top-4 left-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded z-20">
-                    <p>{error}</p>
                 </div>
             )}
 

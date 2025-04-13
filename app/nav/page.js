@@ -567,7 +567,10 @@ export default function NavPage() {
                                     className="p-1.5 bg-lime-300 text-black rounded-full hover:bg-lime-400 flex items-center justify-center transition-colors"
                                     title="Raportează un incident"
                                 >
-                                    <BadgePlus size={20} />
+                                    <div className="text-sm font-bold flex items-center justify-center">
+                                        <BadgePlus size={20} />
+                                        <span className="text-s">Raportează</span>
+                                    </div>
                                 </button>
                             </div>
 
