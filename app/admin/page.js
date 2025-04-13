@@ -36,8 +36,8 @@ export default function AdminPage() {
 
 
       if (!session?.user?.user_metadata.is_admin) {
-         router.push('/404');
-         return;
+        router.push('/404');
+        return;
       }
 
       await fetchReports(session);
@@ -55,12 +55,12 @@ export default function AdminPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
+
       const transformedReports = data.map(report => ({
         ...report,
         coordinates: [report.locationx, report.locationy]
       }));
-      
+
       setReports(transformedReports);
     } catch (err) {
       setError(err.message);
@@ -98,30 +98,30 @@ export default function AdminPage() {
   };
 
   const handleHideReport = async (reportId) => {
-    try {
-      const { data: { session } } = await supabaseAdmin.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('Nu sunteți autentificat');
-      }
-
-      const report = reports.find(r => r.id === reportId);
-      if (!report) {
-        throw new Error('Raportul nu a fost găsit');
-      }
-
-      const { error } = await supabaseAdmin
-        .from('reports')
-        .update({ published: !report.published })
-        .eq('id', reportId);
-
-      if (error) throw error;
-
-      await fetchReports(session);
-    } catch (err) {
-      setError(err.message);
-      console.error('Hide/Show error:', err);
+    const { data: { session } } = await supabaseAdmin.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Nu sunteți autentificat');
     }
-  };
+
+    try {
+      const response = await fetch('/api/admin/delete-report?id=' + reportId, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to toggle report')
+      }
+
+      const data = await response.json()
+      await fetchReports(session);
+    } catch (error) {
+      console.error('Error toggling report:', error)
+    }
+  }
 
   if (loading) {
     return (
@@ -158,15 +158,15 @@ export default function AdminPage() {
             >
               {showMap ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-                  <line x1="9" y1="3" x2="9" y2="18"/>
-                  <line x1="15" y1="6" x2="15" y2="21"/>
+                  <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+                  <line x1="9" y1="3" x2="9" y2="18" />
+                  <line x1="15" y1="6" x2="15" y2="21" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="3" y1="9" x2="21" y2="9"/>
-                  <line x1="9" y1="21" x2="9" y2="9"/>
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <line x1="9" y1="21" x2="9" y2="9" />
                 </svg>
               )}
             </button>

@@ -73,3 +73,78 @@ export async function DELETE(request) {
     );
   }
 } 
+
+export async function POST(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const reportId = searchParams.get('id');
+    
+    if (!reportId) {
+      return NextResponse.json(
+        { error: 'Report ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    const { data: { user }, error: verifyError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (verifyError || !user) {
+      return NextResponse.json(
+        { error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    if (!user.user_metadata?.is_admin) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    const { data: report } = await supabaseAdmin
+      .from('reports')
+      .select('published')
+      .eq('id', reportId)
+      .single();
+
+    if (!report) {
+      return NextResponse.json(
+        { error: 'Report not found' },
+        { status: 404 }
+      );
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('reports')
+      .update({ published: !report.published })
+      .eq('id', reportId);
+
+    if (updateError) {
+      console.error('Error updating report:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to update report' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error('Error in delete-report route:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+} 
